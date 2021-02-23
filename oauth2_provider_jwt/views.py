@@ -51,6 +51,7 @@ class TokenView(views.TokenView):
         issuer = settings.JWT_ISSUER
         payload_enricher = getattr(settings, 'JWT_PAYLOAD_ENRICHER', None)
         if payload_enricher:
+            request.user = get_access_token_model().objects.get(token=content['access_token']).user
             fn = import_string(payload_enricher)
             extra_data = fn(request)
 
