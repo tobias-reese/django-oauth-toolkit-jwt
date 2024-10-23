@@ -3,8 +3,15 @@ import datetime
 import json
 import re
 
-from urllib.parse import urlencode, urlparse, parse_qs  # noqa
-from unittest.mock import patch
+try:
+    from urllib.parse import urlencode, urlparse, parse_qs
+except ImportError:
+    from urllib import urlencode # noqa
+    from urlparse import urlparse, parse_qs
+try:
+    from unittest.mock import patch
+except ImportError:
+    from mock import patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -67,23 +74,23 @@ class PasswordTokenViewTest(TestCase):
         self.dev_user.delete()
 
     @override_settings(JWT_ISSUER='api')
-    @override_settings(JWT_PRIVATE_KEY_API='somevalue')
+    @override_settings(JWT_PRIVATE_KEY_RSA_API='somevalue')
     def test_is_jwt_config_set(self):
         self.assertTrue(TokenView._is_jwt_config_set())
 
     @override_settings(JWT_ISSUER='')
-    @override_settings(JWT_PRIVATE_KEY_API='somevalue')
+    @override_settings(JWT_PRIVATE_KEY_RSA_API='somevalue')
     def test_is_jwt_config_not_set_missing_issuer(self):
         self.assertFalse(TokenView._is_jwt_config_set())
 
     @override_settings()
-    @override_settings(JWT_PRIVATE_KEY_API='somevalue')
+    @override_settings(JWT_PRIVATE_KEY_RSA_API='somevalue')
     def test_is_jwt_config_not_set_none_issuer(self):
         del settings.JWT_ISSUER
         self.assertFalse(TokenView._is_jwt_config_set())
 
     @override_settings(JWT_ISSUER='api')
-    @override_settings(JWT_PRIVATE_KEY_API='')
+    @override_settings(JWT_PRIVATE_KEY_RSA_API='')
     def test_is_jwt_config_not_set_missing_private_key(self):
         self.assertFalse(TokenView._is_jwt_config_set())
 
@@ -115,9 +122,8 @@ class PasswordTokenViewTest(TestCase):
         self.assertEqual(content["scope"], "read write")
         self.assertEqual(content["expires_in"],
                          oauth2_settings.ACCESS_TOKEN_EXPIRE_SECONDS)
-        self.assertTrue('scope' in self.decode_jwt(jwt_token))
-        self.assertEqual(self.decode_jwt(jwt_token).get('scope'),
-                         'read write')
+        self.assertDictContainsSubset({'scope': 'read write'},
+                                      self.decode_jwt(jwt_token))
 
     def test_get_token_authorization_code(self):
         """
@@ -276,9 +282,8 @@ class PasswordTokenViewTest(TestCase):
             **auth_headers)
         content = json.loads(response.content.decode("utf-8"))
         access_token_jwt = content["access_token_jwt"]
-        self.assertTrue('sub' in self.decode_jwt(access_token_jwt))
-        self.assertEqual(self.decode_jwt(access_token_jwt).get('sub'),
-                         'unique-user')
+        self.assertDictContainsSubset({'sub': 'unique-user'},
+                                      self.decode_jwt(access_token_jwt))
 
     def test_get_custom_scope_in_jwt(self):
         token_request_data = {
@@ -295,9 +300,8 @@ class PasswordTokenViewTest(TestCase):
             **auth_headers)
         content = json.loads(response.content.decode("utf-8"))
         access_token_jwt = content["access_token_jwt"]
-        self.assertTrue('scope' in self.decode_jwt(access_token_jwt))
-        self.assertEqual(self.decode_jwt(access_token_jwt).get('scope'),
-                         'read')
+        self.assertDictContainsSubset({'scope': 'read'},
+                                      self.decode_jwt(access_token_jwt))
 
     def test_refresh_token(self):
         access_token = AccessToken.objects.create(
