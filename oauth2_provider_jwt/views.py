@@ -2,11 +2,7 @@ import ast
 import json
 import logging
 
-try:
-    from urllib.parse import urlencode, urlparse, parse_qs
-except ImportError:
-    from urllib import urlencode # noqa
-    from urlparse import urlparse, parse_qs
+from urllib.parse import urlencode, urlparse, parse_qs  # noqa
 
 from django.conf import settings
 from django.utils.module_loading import import_string
@@ -76,7 +72,7 @@ class TokenView(views.TokenView):
     @staticmethod
     def _is_jwt_config_set():
         issuer = getattr(settings, 'JWT_ISSUER', '')
-        private_key_name = 'JWT_PRIVATE_KEY_RSA_{}'.format(issuer.upper())
+        private_key_name = 'JWT_PRIVATE_KEY_{}'.format(issuer.upper())
         private_key = getattr(settings, private_key_name, None)
         id_attribute = getattr(settings, 'JWT_ID_ATTRIBUTE', None)
         if issuer and private_key and id_attribute:
